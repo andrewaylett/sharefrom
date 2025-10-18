@@ -1,0 +1,14 @@
+name = "sharefrom"
+main = "worker/index.ts"
+compatibility_date = "2024-10-18"
+
+[site]
+bucket = "./dist"
+
+[[durable_objects.bindings]]
+name = "SIGNALING_SERVER"
+class_name = "SignalingServer"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["SignalingServer"]

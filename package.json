@@ -1,0 +1,24 @@
+{
+  "name": "sharefrom",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:worker": "npm run build && wrangler dev",
+    "build": "tsc --noEmit && tsc --project worker/tsconfig.json && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit && tsc --project worker/tsconfig.json",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251011.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.1.10",
+    "wrangler": "^4.43.0"
+  },
+  "dependencies": {
+    "@types/qrcode": "^1.5.5",
+    "qrcode": "^1.5.4"
+  }
+}
