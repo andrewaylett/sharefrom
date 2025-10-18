@@ -3,11 +3,6 @@ import QRCode from 'qrcode'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 
-function isMobileDevice(): boolean {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-    || window.innerWidth < 768
-}
-
 async function initLaptopView() {
   const sessionId = crypto.randomUUID()
   const url = `${window.location.origin}?session=${sessionId}`
@@ -76,7 +71,9 @@ function handleFileSelection(event: Event) {
   console.log('Selected files:', Array.from(files).map(f => f.name))
 }
 
-if (isMobileDevice() && window.location.search.includes('session=')) {
+// Show mobile view if session parameter is present, otherwise show laptop view
+const urlParams = new URLSearchParams(window.location.search)
+if (urlParams.has('session')) {
   initMobileView()
 } else {
   initLaptopView()

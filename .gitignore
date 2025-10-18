@@ -21,6 +21,9 @@ dist-ssr
 *.local
 mise.local.toml
 
+# Test coverage
+coverage
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

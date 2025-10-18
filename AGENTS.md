@@ -7,6 +7,8 @@
 - TypeScript with strict mode enabled
 - Separate tsconfig.json for worker code (needs @cloudflare/workers-types)
 - Build process: typecheck both frontend and worker, then bundle with Vite
+- Vitest for testing with happy-dom environment
+- Test files use `*.test.ts` naming convention
 
 ### Cloudflare Workers Integration
 - Worker code lives in `worker/` directory
@@ -38,6 +40,10 @@
 ### Session Management Approach
 - Session ID generated on laptop, encoded in QR code URL
 - Phone scans QR to get session ID
+- View selection based solely on presence of `?session=` query parameter
+  - No session parameter → laptop view (generates QR code)
+  - Session parameter present → mobile view (shows file picker)
+- User agent detection is NOT used - works regardless of device type
 - Both sides connect to signaling server using session ID
 - Session timeout prevents resource leaks (to be implemented)
 
