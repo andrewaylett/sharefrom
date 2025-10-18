@@ -1,0 +1,9 @@
+.beads/*.db
+.beads/*.db-*
+
+*~
+.*.swp
+
+.wrangler
+node_modules
+dist
