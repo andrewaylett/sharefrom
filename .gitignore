@@ -24,6 +24,10 @@ mise.local.toml
 # Test coverage
 coverage
 
+# Wrangler
+.wrangler
+.dev.vars
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

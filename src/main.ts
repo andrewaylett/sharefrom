@@ -1,7 +1,10 @@
 import './style.css'
 import QRCode from 'qrcode'
+import { WebRTCConnection } from './webrtc'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
+
+let connection: WebRTCConnection | null = null
 
 async function initLaptopView() {
   const sessionId = crypto.randomUUID()
@@ -14,6 +17,7 @@ async function initLaptopView() {
       <canvas id="qr-code"></canvas>
     </div>
     <div id="status" class="status">Waiting for connection...</div>
+    <div id="files" class="files"></div>
   `
 
   const canvas = document.getElementById('qr-code') as HTMLCanvasElement
@@ -28,9 +32,40 @@ async function initLaptopView() {
 
   console.log('Session ID:', sessionId)
   console.log('Share URL:', url)
+  
+  // Setup WebRTC connection
+  connection = new WebRTCConnection(sessionId)
+  
+  connection.setOnConnectionStateChange((state) => {
+    const statusDiv = document.getElementById('status')!
+    statusDiv.textContent = `Connection: ${state}`
+  })
+  
+  connection.setOnFileReceived((file) => {
+    const filesDiv = document.getElementById('files')!
+    const fileDiv = document.createElement('div')
+    fileDiv.className = 'file-received'
+    fileDiv.innerHTML = `
+      <div>Received: ${file.name} (${formatFileSize(file.size)})</div>
+      <button onclick="downloadFile('${file.name}')">Download</button>
+    `
+    filesDiv.appendChild(fileDiv)
+    
+    // Store file for download
+    ;(window as any).receivedFiles = (window as any).receivedFiles || new Map()
+    ;(window as any).receivedFiles.set(file.name, file)
+  })
+  
+  try {
+    await connection.connect()
+    document.getElementById('status')!.textContent = 'Connected. Waiting for phone...'
+  } catch (error) {
+    console.error('Connection error:', error)
+    document.getElementById('status')!.textContent = 'Connection error. Please refresh.'
+  }
 }
 
-function initMobileView() {
+async function initMobileView() {
   const urlParams = new URLSearchParams(window.location.search)
   const sessionId = urlParams.get('session')
 
@@ -49,26 +84,88 @@ function initMobileView() {
     <p>Select files to share to your laptop</p>
     <div id="file-input-container">
       <input type="file" id="file-input" multiple accept="*/*">
+      <button id="send-button" disabled>Send Files</button>
     </div>
-    <div id="status" class="status">Session: ${sessionId.substring(0, 8)}...</div>
+    <div id="status" class="status">Connecting...</div>
+    <div id="progress"></div>
   `
 
   const fileInput = document.getElementById('file-input') as HTMLInputElement
-  fileInput.addEventListener('change', handleFileSelection)
+  const sendButton = document.getElementById('send-button') as HTMLButtonElement
+  let selectedFiles: FileList | null = null
+  
+  fileInput.addEventListener('change', (event) => {
+    const input = event.target as HTMLInputElement
+    selectedFiles = input.files
+    
+    if (selectedFiles && selectedFiles.length > 0) {
+      sendButton.disabled = false
+      const statusDiv = document.getElementById('status')!
+      statusDiv.textContent = `Selected ${selectedFiles.length} file(s)`
+    }
+  })
+  
+  sendButton.addEventListener('click', async () => {
+    if (!selectedFiles || !connection) return
+    
+    sendButton.disabled = true
+    const progressDiv = document.getElementById('progress')!
+    
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i]
+      progressDiv.textContent = `Sending ${file.name}...`
+      
+      try {
+        await connection.sendFile(file)
+        progressDiv.textContent = `Sent ${i + 1}/${selectedFiles.length} files`
+      } catch (error) {
+        console.error('Error sending file:', error)
+        progressDiv.textContent = `Error sending ${file.name}`
+      }
+    }
+    
+    progressDiv.textContent = 'All files sent!'
+  })
+  
+  // Setup WebRTC connection
+  connection = new WebRTCConnection(sessionId)
+  
+  connection.setOnConnectionStateChange((state) => {
+    const statusDiv = document.getElementById('status')!
+    if (state === 'connected') {
+      statusDiv.textContent = 'Connected! Select files to send.'
+    } else {
+      statusDiv.textContent = `Connection: ${state}`
+    }
+  })
+  
+  try {
+    await connection.connect()
+    // Phone creates the offer
+    await connection.createOffer()
+  } catch (error) {
+    console.error('Connection error:', error)
+    document.getElementById('status')!.textContent = 'Connection error. Please refresh.'
+  }
 }
 
-function handleFileSelection(event: Event) {
-  const input = event.target as HTMLInputElement
-  const files = input.files
-  
-  if (!files || files.length === 0) {
-    return
-  }
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
 
-  const statusDiv = document.getElementById('status')!
-  statusDiv.textContent = `Selected ${files.length} file(s). Transfer not yet implemented.`
+// Make downloadFile available globally
+;(window as any).downloadFile = (fileName: string) => {
+  const file = (window as any).receivedFiles?.get(fileName)
+  if (!file) return
   
-  console.log('Selected files:', Array.from(files).map(f => f.name))
+  const url = URL.createObjectURL(file)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 // Show mobile view if session parameter is present, otherwise show laptop view

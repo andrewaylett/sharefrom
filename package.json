@@ -4,8 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "dev:worker": "npm run build && wrangler dev",
+    "dev": "npm run build && wrangler dev --live-reload",
     "build": "tsc --noEmit && tsc --project worker/tsconfig.json && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc --project worker/tsconfig.json",

@@ -21,16 +21,22 @@ A simple web service for sharing files from your phone to your laptop using WebR
 
 ## Development
 
+For local development, you need to run the Cloudflare Workers dev server (not the Vite dev server) because the application requires WebSocket support and the signaling server backend:
+
 ```bash
 # Install dependencies
 npm install
 
-# Run frontend dev server
+# Run local development server (includes both frontend and backend)
 npm run dev
 
-# Run with Cloudflare Workers (requires build first)
-npm run dev:worker
+# The app will be available at http://localhost:8787
+# The dev command automatically rebuilds when you change files
+```
 
+For other tasks:
+
+```bash
 # Type check
 npm run typecheck
 
@@ -51,6 +57,49 @@ npm run build
 
 # Deploy to Cloudflare
 npm run deploy
+```
+
+## Why not use `vite dev`?
+
+The Vite dev server doesn't support WebSocket proxying or Durable Objects, which are required for the WebRTC signaling. Use `npm run dev` which runs `wrangler dev` instead - this serves both the static assets and the Worker backend with WebSocket support.
+
+## Deployment
+
+### Cloudflare Setup
+
+1. Create a Cloudflare account at https://cloudflare.com
+2. Get your Account ID from the Workers dashboard
+3. Create an API token with permissions for:
+   - Workers Scripts: Edit
+   - Account Settings: Read
+   - Durable Objects: Edit
+
+### GitHub Actions Deployment
+
+This project includes a GitHub Actions workflow that automatically:
+- Runs tests and type checking on all PRs
+- Builds and deploys to Cloudflare on pushes to `main`
+
+To set up automated deployment:
+
+1. Go to your GitHub repository Settings → Secrets and variables → Actions
+2. Add a new repository secret:
+   - Name: `CLOUDFLARE_API_TOKEN`
+   - Value: Your Cloudflare API token from above
+
+The workflow will automatically deploy on every push to the `main` branch.
+
+### Manual Deployment
+
+```bash
+# Build and deploy
+npm run deploy
+```
+
+You'll need to configure Wrangler with your Cloudflare credentials first:
+
+```bash
+npx wrangler login
 ```
 
 ## Project Structure
