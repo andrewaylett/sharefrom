@@ -96,12 +96,19 @@ export default {
 
     // Serve static assets for everything else
     const assetResp = await env.ASSETS.fetch(request);
+    // Duplicate response to preserve body stream
+    const response = new Response(assetResp.body, {
+      status: assetResp.status,
+      statusText: assetResp.statusText,
+      headers: new Headers(assetResp.headers),
+    });
+
     // Mutate headers in place to preserve response identity (important for tests)
     for (const [k, v] of Object.entries(SECURITY_HEADERS)) {
-      if (k === 'Content-Security-Policy' && assetResp.headers.has(k)) continue;
-      assetResp.headers.set(k, v);
+      if (k === 'Content-Security-Policy' && response.headers.has(k)) continue;
+      response.headers.set(k, v);
     }
-    return assetResp;
+    return response;
   },
 };
 

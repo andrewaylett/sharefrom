@@ -8,14 +8,14 @@ const MAX_RECONNECT_ATTEMPTS = 3;
 const RECONNECT_DELAY_MS = 2000;
 
 export class WebRTCConnection {
-  private pc: RTCPeerConnection | null = null;
-  private ws: WebSocket | null = null;
-  private dataChannel: RTCDataChannel | null = null;
+  pc: RTCPeerConnection | null = null;
+  ws: WebSocket | null = null;
+  dataChannel: RTCDataChannel | null = null;
   private sessionId: string;
   private reconnectAttempts = 0;
   private onFileReceived?: (file: File) => void;
   private onConnectionStateChange?: (state: RTCPeerConnectionState) => void;
-  private onError?: (error: Error) => void;
+  private onError?: (error: unknown) => void;
 
   constructor(sessionId: string) {
     this.sessionId = sessionId;
@@ -42,19 +42,25 @@ export class WebRTCConnection {
         );
       }, 10_000);
 
-      const addWsListener = (
-        type: 'open' | 'error' | 'close' | 'message',
-        handler: (event: unknown) => void,
+      const addWsListener = <K extends keyof WebSocketEventMap>(
+        type: K,
+        handler: (this: WebSocket, event: WebSocketEventMap[K]) => void,
       ) => {
-        const wsAny = this.ws as unknown as { addEventListener?: Function } & Record<string, unknown>;
+        const wsAny = this.ws;
         if (wsAny && typeof wsAny.addEventListener === 'function') {
           // Use standard event listener when available
-          (this.ws as WebSocket).addEventListener(type as any, handler as any);
+          wsAny.addEventListener(type, handler);
         } else if (wsAny) {
           // Fallback for test mocks that don't support addEventListener
-          const prop = type === 'message' ? 'onmessage' : type === 'error' ? 'onerror' : type === 'close' ? 'onclose' : 'onopen';
-          // @ts-expect-error - assigning event handler on mock
-          wsAny[prop] = handler;
+          const prop =
+            type === 'message'
+              ? 'onmessage'
+              : type === 'error'
+                ? 'onerror'
+                : type === 'close'
+                  ? 'onclose'
+                  : 'onopen';
+          (wsAny as unknown as Record<string, unknown>)[prop] = handler;
         }
       };
 
@@ -85,22 +91,27 @@ export class WebRTCConnection {
           );
           this.reconnectAttempts++;
           setTimeout(() => {
-            void this.connect().catch((error) => this.onError?.(error));
+            void this.connect().catch((error: unknown) =>
+              this.onError?.(error),
+            );
           }, RECONNECT_DELAY_MS);
         }
       });
 
-      addWsListener('message', async (event: any) => {
+      addWsListener('message', (event) => {
         try {
-          const data = event?.data;
+          const data: unknown = event.data;
           if (typeof data === 'string') {
-            await this.handleSignalingMessage(JSON.parse(data));
+            void this.handleSignalingMessage(JSON.parse(data));
           } else {
             console.warn('Unexpected non-text signaling message');
           }
         } catch (error: unknown) {
           console.error('Error handling signaling message:', error);
-          const err = error instanceof Error ? error : new Error('Unknown signaling error');
+          const err =
+            error instanceof Error
+              ? error
+              : new Error('Unknown signaling error');
           this.onError?.(err);
         }
       });
@@ -140,17 +151,20 @@ export class WebRTCConnection {
     if (!this.dataChannel) return;
 
     const dc = this.dataChannel;
-    const addDcListener = (
-      type: 'open' | 'close' | 'message',
-      handler: (event: unknown) => void,
+    const addDcListener = <K extends keyof RTCDataChannelEventMap>(
+      type: K,
+      handler: (this: RTCDataChannel, event: RTCDataChannelEventMap[K]) => void,
     ) => {
-      const dcAny = dc as unknown as { addEventListener?: Function } & Record<string, unknown>;
-      if (typeof dcAny.addEventListener === 'function') {
-        dc.addEventListener(type as any, handler as any);
+      if (typeof dc.addEventListener === 'function') {
+        dc.addEventListener(type, handler);
       } else {
-        const prop = type === 'message' ? 'onmessage' : type === 'close' ? 'onclose' : 'onopen';
-        // @ts-expect-error - assigning handler on mock channel
-        dcAny[prop] = handler;
+        const prop =
+          type === 'message'
+            ? 'onmessage'
+            : type === 'close'
+              ? 'onclose'
+              : 'onopen';
+        (dc as unknown as Record<string, unknown>)[prop] = handler;
       }
     };
 
@@ -162,19 +176,28 @@ export class WebRTCConnection {
       console.log('Data channel closed');
     });
 
-    addDcListener('message', (event: any) => {
-      void this.handleDataChannelMessage(event.data);
+    addDcListener('message', (event) => {
+      if (typeof event.data === 'string' || event.data instanceof ArrayBuffer) {
+        this.handleDataChannelMessage(event.data);
+      } else {
+        throw new TypeError('Unexpected event data');
+      }
     });
   }
 
-  private async handleSignalingMessage(message: unknown) {
+  async handleSignalingMessage(message: unknown) {
     if (!this.pc) return;
 
     if (!message || typeof (message as { type?: unknown }).type !== 'string') {
       return;
     }
     const msg = message as {
-      type: 'connected' | 'offer' | 'answer' | 'ice-candidate' | 'peer-disconnected';
+      type:
+        | 'connected'
+        | 'offer'
+        | 'answer'
+        | 'ice-candidate'
+        | 'peer-disconnected';
       payload?: unknown;
       role?: string;
     };
@@ -277,28 +300,48 @@ export class WebRTCConnection {
   private handleDataChannelMessage(data: string | ArrayBuffer): void {
     if (typeof data === 'string') {
       const parsed = JSON.parse(data) as
-        | { type: 'file-metadata'; name: string; size: number; mimeType: string }
-        | { type: 'file-end' };
+        | {
+            type: 'file-metadata';
+            name: string;
+            size: number;
+            mimeType: string;
+          }
+        | { type: string };
 
-      if (parsed.type === 'file-metadata') {
-        this.currentFileMetadata = {
-          name: parsed.name,
-          size: parsed.size,
-          mimeType: parsed.mimeType,
-        };
-        this.fileBuffer = [];
-      } else if (parsed.type === 'file-end' && this.currentFileMetadata) {
-        // Reconstruct file from chunks
-        const blob = new Blob(this.fileBuffer, {
-          type: this.currentFileMetadata.mimeType,
-        });
-        const file = new File([blob], this.currentFileMetadata.name, {
-          type: this.currentFileMetadata.mimeType,
-        });
+      if (typeof parsed === 'object' && 'type' in parsed) {
+        if (
+          parsed.type === 'file-metadata' &&
+          'name' in parsed &&
+          'size' in parsed &&
+          'mimeType' in parsed
+        ) {
+          this.currentFileMetadata = {
+            name: `{parsed.name}`,
+            size: Number.parseInt(`{parsed.size}`, 10),
+            mimeType: `{parsed.mimeType}`,
+          };
+          this.fileBuffer = [];
+        } else if (
+          'type' in parsed &&
+          parsed.type === 'file-end' &&
+          this.currentFileMetadata
+        ) {
+          // Reconstruct file from chunks
+          const blob = new Blob(this.fileBuffer, {
+            type: this.currentFileMetadata.mimeType,
+          });
+          const file = new File([blob], this.currentFileMetadata.name, {
+            type: this.currentFileMetadata.mimeType,
+          });
 
-        this.onFileReceived?.(file);
-        this.fileBuffer = [];
-        this.currentFileMetadata = null;
+          this.onFileReceived?.(file);
+          this.fileBuffer = [];
+          this.currentFileMetadata = null;
+        } else {
+          throw new Error(`Invalid message type: ${parsed.type}`);
+        }
+      } else {
+        throw new Error('Invalid message format');
       }
     } else {
       // Binary data - file chunk
@@ -316,7 +359,7 @@ export class WebRTCConnection {
     this.onConnectionStateChange = callback;
   }
 
-  setOnError(callback: (error: Error) => void) {
+  setOnError(callback: (error: unknown) => void) {
     this.onError = callback;
   }
 

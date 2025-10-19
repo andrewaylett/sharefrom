@@ -78,11 +78,12 @@ async function initLaptopView() {
   });
 
   connection.setOnError((error) => {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     const statusDiv = document.querySelector('#status')!;
-    statusDiv.textContent = `✗ Error: ${error.message}`;
+    statusDiv.textContent = `✗ Error: ${message}`;
     statusDiv.className = 'error';
-    trackConnectionError('laptop', error.message);
-    trackError('connection', error.message);
+    trackConnectionError('laptop', message);
+    trackError('connection', message);
   });
 
   connection.setOnFileReceived((file) => {
@@ -96,8 +97,9 @@ async function initLaptopView() {
     filesDiv.append(fileDiv);
 
     // Store file for download
-    window.receivedFiles = window.receivedFiles ?? new Map<string, File>();
-    window.receivedFiles.set(file.name, file);
+    globalThis.receivedFiles =
+      globalThis.receivedFiles ?? new Map<string, File>();
+    globalThis.receivedFiles.set(file.name, file);
 
     // Update status
     const statusDiv = document.querySelector('#status')!;
@@ -105,7 +107,7 @@ async function initLaptopView() {
     statusDiv.className = 'status success';
 
     // Track analytics
-    trackFileReceived(file.size, file.type ?? 'unknown');
+    trackFileReceived(file.size, file.type);
   });
 
   try {
@@ -176,11 +178,13 @@ async function initMobileView() {
         try {
           await connection.sendFile(file);
           progressDiv.textContent = `Sent ${i + 1}/${selectedFiles.length} files`;
-          trackFileSent(file.size, file.type ?? 'unknown');
+          trackFileSent(file.size, file.type);
         } catch (error) {
           console.error('Error sending file:', error);
           const errorMsg =
-            error instanceof Error ? error.message : `Error sending ${file.name}`;
+            error instanceof Error
+              ? error.message
+              : `Error sending ${file.name}`;
           progressDiv.textContent = errorMsg;
           trackError('file_send', errorMsg);
         }
@@ -227,12 +231,13 @@ async function initMobileView() {
   });
 
   connection.setOnError((error) => {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     const statusDiv = document.querySelector('#status')!;
-    statusDiv.textContent = `✗ Error: ${error.message}`;
+    statusDiv.textContent = `✗ Error: ${message}`;
     statusDiv.className = 'error';
     sendButton.disabled = true;
-    trackConnectionError('phone', error.message);
-    trackError('connection', error.message);
+    trackConnectionError('phone', message);
+    trackError('connection', message);
   });
 
   try {
@@ -265,8 +270,8 @@ function formatFileSize(bytes: number): string {
 }
 
 // Make downloadFile available globally
-window.downloadFile = (fileName: string) => {
-  const file = window.receivedFiles?.get(fileName);
+globalThis.downloadFile = (fileName: string) => {
+  const file = globalThis.receivedFiles?.get(fileName);
   if (!file) return;
 
   const url = URL.createObjectURL(file);
@@ -279,8 +284,5 @@ window.downloadFile = (fileName: string) => {
 
 // Show mobile view if session parameter is present, otherwise show laptop view
 const urlParams = new URLSearchParams(globalThis.location.search);
-if (urlParams.has('session')) {
-  initMobileView();
-} else {
-  initLaptopView();
-}
+const initFn = urlParams.has('session') ? initMobileView : initLaptopView;
+await initFn();

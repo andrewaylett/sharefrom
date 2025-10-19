@@ -8,7 +8,6 @@ export default tseslint.config(
             '**/node_modules/*',
             '**/dist/*',
             '**/.wrangler/*',
-            'vitest.config.ts',
         ],
     },
     {
@@ -19,17 +18,22 @@ export default tseslint.config(
                     allowDefaultProject: ['*.js', '*.mjs', '*.ts'],
                 },
             },
-            globals: {
-                ...globals['shared-node-browser'],
-            },
         },
     },
     {
         files: ['**/*.ts', '**/*.mts', '**/*.tsx', '**/*.mtsx'],
         ...andrewaylett.configs.recommendedWithTypes,
+    },
+    {
+        files: ['src/**'],
         rules: {
             // Allow non-null assertions in UI code where DOM nodes are required.
             '@typescript-eslint/no-non-null-assertion': 'off',
+        },
+        languageOptions: {
+            globals: {
+                ...globals.browser,
+            },
         },
     },
     {

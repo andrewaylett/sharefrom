@@ -28,7 +28,7 @@ For local development, you need to run the Cloudflare Workers dev server (not th
 npm install
 
 # Run local development server (includes both frontend and backend)
-npm run dev
+npm run dev:run
 
 # The app will be available at http://localhost:8787
 # The dev command automatically rebuilds when you change files
@@ -37,8 +37,8 @@ npm run dev
 For other tasks:
 
 ```bash
-# Type check
-npm run typecheck
+# Check and fix where possible
+npm run dev
 
 # Run tests
 npm test
