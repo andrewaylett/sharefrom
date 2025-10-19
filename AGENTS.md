@@ -17,6 +17,11 @@
   - `[site]` section serves static assets from `dist/`
   - Durable Objects binding for SignalingServer class
 - Worker serves both API routes (`/api/*`) and static assets (via ASSETS binding)
+- SignalingServer is a Durable Object that manages WebSocket connections
+  - One instance per session (using session ID as Durable Object name)
+  - Handles WebSocket upgrade and relays signaling messages
+  - First connection is laptop, second is phone
+  - Automatically cleans up when both peers disconnect
 
 ### Development Workflow
 - `npm run dev` - frontend-only development with Vite HMR

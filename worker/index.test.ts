@@ -2,8 +2,35 @@ import { describe, it, expect, vi } from 'vitest'
 import worker from './index'
 
 describe('Worker Request Routing', () => {
-  it('should route API requests to signaling handler', async () => {
-    const request = new Request('https://example.com/api/signal')
+  it('should route WebSocket signaling requests to Durable Object', async () => {
+    const mockStub = {
+      fetch: vi.fn().mockResolvedValue(new Response(null, { status: 101 }))
+    }
+    
+    const mockId = { toString: () => 'test-id' }
+    
+    const request = new Request('https://example.com/api/signal/connect?session=test-session', {
+      headers: { 'Upgrade': 'websocket' }
+    })
+    
+    const env = {
+      SIGNALING_SERVER: {
+        idFromName: vi.fn().mockReturnValue(mockId),
+        get: vi.fn().mockReturnValue(mockStub)
+      } as unknown as DurableObjectNamespace,
+      ASSETS: {} as Fetcher
+    }
+
+    const response = await worker.fetch(request, env)
+    
+    expect(env.SIGNALING_SERVER.idFromName).toHaveBeenCalledWith('test-session')
+    expect(env.SIGNALING_SERVER.get).toHaveBeenCalledWith(mockId)
+    expect(mockStub.fetch).toHaveBeenCalledWith(request)
+    expect(response.status).toBe(101)
+  })
+
+  it('should return 400 for signaling request without session ID', async () => {
+    const request = new Request('https://example.com/api/signal/connect')
     const env = {
       SIGNALING_SERVER: {} as DurableObjectNamespace,
       ASSETS: {} as Fetcher
@@ -11,8 +38,8 @@ describe('Worker Request Routing', () => {
 
     const response = await worker.fetch(request, env)
     
-    expect(response.status).toBe(501)
-    expect(await response.text()).toBe('Signaling API - not yet implemented')
+    expect(response.status).toBe(400)
+    expect(await response.text()).toBe('Missing session ID')
   })
 
   it('should route non-API requests to assets', async () => {
@@ -29,25 +56,5 @@ describe('Worker Request Routing', () => {
     
     expect(env.ASSETS.fetch).toHaveBeenCalledWith(request)
     expect(response).toBe(mockResponse)
-  })
-
-  it('should handle different API paths under /api/signal', async () => {
-    const paths = [
-      '/api/signal',
-      '/api/signal/connect',
-      '/api/signal/offer',
-      '/api/signal/answer'
-    ]
-
-    for (const path of paths) {
-      const request = new Request(`https://example.com${path}`)
-      const env = {
-        SIGNALING_SERVER: {} as DurableObjectNamespace,
-        ASSETS: {} as Fetcher
-      }
-
-      const response = await worker.fetch(request, env)
-      expect(response.status).toBe(501)
-    }
   })
 })
