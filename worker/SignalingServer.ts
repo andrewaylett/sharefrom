@@ -2,6 +2,7 @@ interface Session {
   laptopWs: WebSocket | null
   phoneWs: WebSocket | null
   createdAt: number
+  lastActivityAt: number
 }
 
 interface SignalingMessage {
@@ -9,11 +10,52 @@ interface SignalingMessage {
   payload?: unknown
 }
 
+const SESSION_TIMEOUT_MS = 15 * 60 * 1000 // 15 minutes
+
 export class SignalingServer {
   private sessions: Map<string, Session>
+  private state: DurableObjectState
 
-  constructor(_state: DurableObjectState) {
+  constructor(state: DurableObjectState) {
+    this.state = state
     this.sessions = new Map()
+    
+    // Set up periodic cleanup every minute
+    this.state.blockConcurrencyWhile(async () => {
+      const alarm = await this.state.storage.getAlarm()
+      if (!alarm) {
+        await this.state.storage.setAlarm(Date.now() + 60000) // 1 minute
+      }
+    })
+  }
+
+  async alarm() {
+    // Clean up expired sessions
+    const now = Date.now()
+    const sessionsToDelete: string[] = []
+    
+    for (const [sessionId, session] of this.sessions.entries()) {
+      if (now - session.lastActivityAt > SESSION_TIMEOUT_MS) {
+        console.log(`Cleaning up expired session: ${sessionId}`)
+        
+        // Close any open WebSocket connections
+        if (session.laptopWs) {
+          session.laptopWs.close(1000, 'Session expired')
+        }
+        if (session.phoneWs) {
+          session.phoneWs.close(1000, 'Session expired')
+        }
+        
+        sessionsToDelete.push(sessionId)
+      }
+    }
+    
+    for (const sessionId of sessionsToDelete) {
+      this.sessions.delete(sessionId)
+    }
+    
+    // Schedule next cleanup
+    await this.state.storage.setAlarm(Date.now() + 60000)
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -38,13 +80,18 @@ export class SignalingServer {
     // Get or create session
     let session = this.sessions.get(sessionId)
     if (!session) {
+      const now = Date.now()
       session = {
         laptopWs: null,
         phoneWs: null,
-        createdAt: Date.now()
+        createdAt: now,
+        lastActivityAt: now
       }
       this.sessions.set(sessionId, session)
     }
+    
+    // Update last activity
+    session.lastActivityAt = Date.now()
 
     // Determine if this is laptop or phone connection
     // First connection is laptop, second is phone
@@ -88,6 +135,9 @@ export class SignalingServer {
   private handleMessage(sessionId: string, sender: 'laptop' | 'phone', data: string) {
     const session = this.sessions.get(sessionId)
     if (!session) return
+    
+    // Update last activity on message
+    session.lastActivityAt = Date.now()
 
     try {
       // Parse and validate the message

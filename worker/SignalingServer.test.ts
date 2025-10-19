@@ -13,12 +13,53 @@ describe('SignalingServer - Session Management', () => {
     sessions.set(sessionId, {
       laptopWs: null,
       phoneWs: null,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      lastActivityAt: Date.now()
     })
     
     expect(sessions.has(sessionId)).toBe(true)
     expect(sessions.get(sessionId)).toHaveProperty('laptopWs')
     expect(sessions.get(sessionId)).toHaveProperty('phoneWs')
+    expect(sessions.get(sessionId)).toHaveProperty('lastActivityAt')
+  })
+
+  it('should track last activity timestamp', () => {
+    const now = Date.now()
+    const session = {
+      laptopWs: null,
+      phoneWs: null,
+      createdAt: now,
+      lastActivityAt: now
+    }
+    
+    expect(session.lastActivityAt).toBe(now)
+    
+    // Simulate activity update
+    const later = now + 5000
+    session.lastActivityAt = later
+    expect(session.lastActivityAt).toBe(later)
+  })
+
+  it('should expire sessions after timeout period', () => {
+    const SESSION_TIMEOUT_MS = 15 * 60 * 1000
+    const now = Date.now()
+    
+    const activeSession = {
+      laptopWs: null,
+      phoneWs: null,
+      createdAt: now,
+      lastActivityAt: now
+    }
+    
+    const expiredSession = {
+      laptopWs: null,
+      phoneWs: null,
+      createdAt: now - SESSION_TIMEOUT_MS - 1000,
+      lastActivityAt: now - SESSION_TIMEOUT_MS - 1000
+    }
+    
+    expect(now - activeSession.lastActivityAt).toBeLessThan(SESSION_TIMEOUT_MS)
+    expect(now - expiredSession.lastActivityAt).toBeGreaterThan(SESSION_TIMEOUT_MS)
   })
 
   it('should identify first connection as laptop', () => {

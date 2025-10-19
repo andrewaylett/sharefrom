@@ -56,7 +56,11 @@
   - Session parameter present → mobile view (shows file picker)
 - User agent detection is NOT used - works regardless of device type
 - Both sides connect to signaling server using session ID
-- Session timeout prevents resource leaks (to be implemented)
+- Session timeout: 15 minutes of inactivity
+  - lastActivityAt timestamp updated on every message
+  - Durable Object alarm runs every minute to clean up expired sessions
+  - Expired sessions automatically close WebSocket connections
+- Session timeout prevents resource leaks and orphaned connections
 
 ## Known Issues
 
