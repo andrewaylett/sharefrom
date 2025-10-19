@@ -1,12 +1,15 @@
 import './style.css'
 import QRCode from 'qrcode'
 import { WebRTCConnection } from './webrtc'
+import { trackPageView, trackConnectionSuccess, trackConnectionError, trackFileSent, trackFileReceived, trackError } from './analytics'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 
 let connection: WebRTCConnection | null = null
 
 async function initLaptopView() {
+  trackPageView('laptop')
+  
   const sessionId = crypto.randomUUID()
   const url = `${window.location.origin}?session=${sessionId}`
   
@@ -65,6 +68,8 @@ async function initLaptopView() {
     const statusDiv = document.getElementById('status')!
     statusDiv.textContent = `✗ Error: ${error.message}`
     statusDiv.className = 'error'
+    trackConnectionError('laptop', error.message)
+    trackError('connection', error.message)
   })
   
   connection.setOnFileReceived((file) => {
@@ -85,6 +90,9 @@ async function initLaptopView() {
     const statusDiv = document.getElementById('status')!
     statusDiv.textContent = `✓ Received ${file.name}`
     statusDiv.className = 'status success'
+    
+    // Track analytics
+    trackFileReceived(file.size, file.type || 'unknown')
   })
   
   try {
@@ -154,9 +162,12 @@ async function initMobileView() {
       try {
         await connection.sendFile(file)
         progressDiv.textContent = `Sent ${i + 1}/${selectedFiles.length} files`
+        trackFileSent(file.size, file.type || 'unknown')
       } catch (error) {
         console.error('Error sending file:', error)
-        progressDiv.textContent = `Error sending ${file.name}`
+        const errorMsg = error instanceof Error ? error.message : `Error sending ${file.name}`
+        progressDiv.textContent = errorMsg
+        trackError('file_send', errorMsg)
       }
     }
     
@@ -199,6 +210,8 @@ async function initMobileView() {
     statusDiv.textContent = `✗ Error: ${error.message}`
     statusDiv.className = 'error'
     sendButton.disabled = true
+    trackConnectionError('phone', error.message)
+    trackError('connection', error.message)
   })
   
   try {
@@ -209,11 +222,15 @@ async function initMobileView() {
     await connection.createOffer()
     statusDiv.textContent = '✓ Connected! Select files to send.'
     statusDiv.className = 'status success'
+    trackConnectionSuccess('phone')
   } catch (error) {
     console.error('Connection error:', error)
     const statusDiv = document.getElementById('status')!
-    statusDiv.textContent = `✗ ${error instanceof Error ? error.message : 'Connection error. Please refresh.'}`
+    const errorMsg = error instanceof Error ? error.message : 'Connection error. Please refresh.'
+    statusDiv.textContent = `✗ ${errorMsg}`
     statusDiv.className = 'error'
+    trackConnectionError('phone', errorMsg)
+    trackError('connection', errorMsg)
   }
 }
 

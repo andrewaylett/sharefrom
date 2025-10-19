@@ -63,6 +63,22 @@ npm run deploy
 
 The Vite dev server doesn't support WebSocket proxying or Durable Objects, which are required for the WebRTC signaling. Use `npm run dev` which runs `wrangler dev` instead - this serves both the static assets and the Worker backend with WebSocket support.
 
+## Analytics
+
+This project uses [Plausible Analytics](https://plausible.io) for privacy-friendly analytics. The following events are tracked:
+
+- **Page views**: Laptop vs mobile view
+- **Connection events**: Success and failure rates
+- **File transfers**: Number and sizes of files transferred
+- **Errors**: Connection and transfer errors for debugging
+
+Plausible is GDPR-compliant, doesn't use cookies, and doesn't track personal information. To use analytics in your deployment:
+
+1. Create a Plausible account at https://plausible.io
+2. Add your domain to Plausible
+3. Update `DOMAIN` in `src/analytics.ts` to match your domain
+4. Deploy - analytics will automatically start tracking
+
 ## Deployment
 
 ### Cloudflare Setup
@@ -101,6 +117,31 @@ You'll need to configure Wrangler with your Cloudflare credentials first:
 ```bash
 npx wrangler login
 ```
+
+### Custom Domain Setup (Optional)
+
+To use a custom domain like `sharefrom.xyz`:
+
+1. Add your domain to Cloudflare (if not already)
+2. In your `wrangler.toml`, add:
+   ```toml
+   [env.production]
+   routes = [
+     { pattern = "sharefrom.xyz/*", zone_name = "sharefrom.xyz" }
+   ]
+   ```
+3. Deploy with: `wrangler deploy --env production`
+4. DNS will automatically be configured by Cloudflare
+
+### Production Checklist
+
+Before deploying to production:
+- [ ] Test file transfer locally with `npm run dev`
+- [ ] Verify WebSocket connections work
+- [ ] Test with actual phone/laptop devices
+- [ ] Configure CLOUDFLARE_API_TOKEN in GitHub secrets
+- [ ] Review Cloudflare Durable Objects pricing
+- [ ] Set up monitoring/logging (optional)
 
 ## Project Structure
 

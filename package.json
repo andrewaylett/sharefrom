@@ -25,6 +25,7 @@
     "wrangler": "^4.43.0"
   },
   "dependencies": {
+    "@plausible-analytics/tracker": "^0.4.3",
     "@types/qrcode": "^1.5.5",
     "qrcode": "^1.5.4"
   }
