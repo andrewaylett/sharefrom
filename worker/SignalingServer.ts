@@ -19,7 +19,7 @@ export class SignalingServer {
   constructor(state: DurableObjectState) {
     this.state = state
     this.sessions = new Map()
-    
+
     // Set up periodic cleanup every minute
     this.state.blockConcurrencyWhile(async () => {
       const alarm = await this.state.storage.getAlarm()
@@ -33,11 +33,11 @@ export class SignalingServer {
     // Clean up expired sessions
     const now = Date.now()
     const sessionsToDelete: string[] = []
-    
+
     for (const [sessionId, session] of this.sessions.entries()) {
       if (now - session.lastActivityAt > SESSION_TIMEOUT_MS) {
         console.log(`Cleaning up expired session: ${sessionId}`)
-        
+
         // Close any open WebSocket connections
         if (session.laptopWs) {
           session.laptopWs.close(1000, 'Session expired')
@@ -45,26 +45,30 @@ export class SignalingServer {
         if (session.phoneWs) {
           session.phoneWs.close(1000, 'Session expired')
         }
-        
+
         sessionsToDelete.push(sessionId)
       }
     }
-    
+
     for (const sessionId of sessionsToDelete) {
       this.sessions.delete(sessionId)
     }
-    
+
     // Schedule next cleanup
     await this.state.storage.setAlarm(Date.now() + 60000)
   }
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
-    
+
     // Get session ID from query parameter
     const sessionId = url.searchParams.get('session')
     if (!sessionId) {
       return new Response('Missing session ID', { status: 400 })
+    }
+    // Validate UUID v4 format (defense-in-depth)
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sessionId)) {
+      return new Response('Invalid session ID', { status: 400 })
     }
 
     // Check for WebSocket upgrade
@@ -89,14 +93,14 @@ export class SignalingServer {
       }
       this.sessions.set(sessionId, session)
     }
-    
+
     // Update last activity
     session.lastActivityAt = Date.now()
 
     // Determine if this is laptop or phone connection
     // First connection is laptop, second is phone
     const isLaptop = session.laptopWs === null
-    
+
     if (isLaptop) {
       session.laptopWs = server
       this.handleWebSocket(server, sessionId, 'laptop')
@@ -135,17 +139,17 @@ export class SignalingServer {
   private handleMessage(sessionId: string, sender: 'laptop' | 'phone', data: string) {
     const session = this.sessions.get(sessionId)
     if (!session) return
-    
+
     // Update last activity on message
     session.lastActivityAt = Date.now()
 
     try {
       // Parse and validate the message
       JSON.parse(data) as SignalingMessage
-      
+
       // Relay message to the other peer
       const targetWs = sender === 'laptop' ? session.phoneWs : session.laptopWs
-      
+
       if (targetWs && targetWs.readyState === WebSocket.READY_STATE_OPEN) {
         targetWs.send(data)
       }

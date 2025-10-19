@@ -9,10 +9,10 @@ let connection: WebRTCConnection | null = null
 
 async function initLaptopView() {
   trackPageView('laptop')
-  
+
   const sessionId = crypto.randomUUID()
   const url = `${window.location.origin}?session=${sessionId}`
-  
+
   app.innerHTML = `
     <h1>Share from Phone</h1>
     <p>Scan this QR code with your phone to share files</p>
@@ -35,10 +35,10 @@ async function initLaptopView() {
 
   console.log('Session ID:', sessionId)
   console.log('Share URL:', url)
-  
+
   // Setup WebRTC connection
   connection = new WebRTCConnection(sessionId)
-  
+
   connection.setOnConnectionStateChange((state) => {
     const statusDiv = document.getElementById('status')!
     switch (state) {
@@ -63,7 +63,7 @@ async function initLaptopView() {
         statusDiv.className = 'status'
     }
   })
-  
+
   connection.setOnError((error) => {
     const statusDiv = document.getElementById('status')!
     statusDiv.textContent = `✗ Error: ${error.message}`
@@ -71,7 +71,7 @@ async function initLaptopView() {
     trackConnectionError('laptop', error.message)
     trackError('connection', error.message)
   })
-  
+
   connection.setOnFileReceived((file) => {
     const filesDiv = document.getElementById('files')!
     const fileDiv = document.createElement('div')
@@ -81,20 +81,20 @@ async function initLaptopView() {
       <button onclick="downloadFile('${file.name}')">Download</button>
     `
     filesDiv.appendChild(fileDiv)
-    
+
     // Store file for download
     ;(window as any).receivedFiles = (window as any).receivedFiles || new Map()
     ;(window as any).receivedFiles.set(file.name, file)
-    
+
     // Update status
     const statusDiv = document.getElementById('status')!
     statusDiv.textContent = `✓ Received ${file.name}`
     statusDiv.className = 'status success'
-    
+
     // Track analytics
     trackFileReceived(file.size, file.type || 'unknown')
   })
-  
+
   try {
     const statusDiv = document.getElementById('status')!
     statusDiv.textContent = '⟳ Connecting to signaling server...'
@@ -137,28 +137,28 @@ async function initMobileView() {
   const fileInput = document.getElementById('file-input') as HTMLInputElement
   const sendButton = document.getElementById('send-button') as HTMLButtonElement
   let selectedFiles: FileList | null = null
-  
+
   fileInput.addEventListener('change', (event) => {
     const input = event.target as HTMLInputElement
     selectedFiles = input.files
-    
+
     if (selectedFiles && selectedFiles.length > 0) {
       sendButton.disabled = false
       const statusDiv = document.getElementById('status')!
       statusDiv.textContent = `Selected ${selectedFiles.length} file(s)`
     }
   })
-  
+
   sendButton.addEventListener('click', async () => {
     if (!selectedFiles || !connection) return
-    
+
     sendButton.disabled = true
     const progressDiv = document.getElementById('progress')!
-    
+
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i]
       progressDiv.textContent = `Sending ${file.name}...`
-      
+
       try {
         await connection.sendFile(file)
         progressDiv.textContent = `Sent ${i + 1}/${selectedFiles.length} files`
@@ -170,13 +170,13 @@ async function initMobileView() {
         trackError('file_send', errorMsg)
       }
     }
-    
+
     progressDiv.textContent = 'All files sent!'
   })
-  
+
   // Setup WebRTC connection
   connection = new WebRTCConnection(sessionId)
-  
+
   connection.setOnConnectionStateChange((state) => {
     const statusDiv = document.getElementById('status')!
     switch (state) {
@@ -204,7 +204,7 @@ async function initMobileView() {
         statusDiv.className = 'status'
     }
   })
-  
+
   connection.setOnError((error) => {
     const statusDiv = document.getElementById('status')!
     statusDiv.textContent = `✗ Error: ${error.message}`
@@ -213,7 +213,7 @@ async function initMobileView() {
     trackConnectionError('phone', error.message)
     trackError('connection', error.message)
   })
-  
+
   try {
     const statusDiv = document.getElementById('status')!
     statusDiv.textContent = '⟳ Connecting to laptop...'
@@ -244,7 +244,7 @@ function formatFileSize(bytes: number): string {
 ;(window as any).downloadFile = (fileName: string) => {
   const file = (window as any).receivedFiles?.get(fileName)
   if (!file) return
-  
+
   const url = URL.createObjectURL(file)
   const a = document.createElement('a')
   a.href = url

@@ -25,12 +25,12 @@ export class WebRTCConnection {
     // Connect to signaling server
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const wsUrl = `${protocol}//${window.location.host}/api/signal/connect?session=${this.sessionId}`
-    
+
     this.ws = new WebSocket(wsUrl)
-    
+
     return new Promise((resolve, reject) => {
       if (!this.ws) return reject(new Error('WebSocket not initialized'))
-      
+
       const connectTimeout = setTimeout(() => {
         reject(new Error('Connection timeout - please check your internet connection'))
       }, 10000)
@@ -50,7 +50,7 @@ export class WebRTCConnection {
         this.onError?.(err)
         reject(err)
       }
-      
+
       this.ws.onclose = (event) => {
         clearTimeout(connectTimeout)
         if (!event.wasClean && this.reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
@@ -158,7 +158,7 @@ export class WebRTCConnection {
 
     const offer = await this.pc.createOffer()
     await this.pc.setLocalDescription(offer)
-    
+
     this.ws?.send(JSON.stringify({
       type: 'offer',
       payload: offer
@@ -200,7 +200,7 @@ export class WebRTCConnection {
   private async handleDataChannelMessage(data: string | ArrayBuffer) {
     if (typeof data === 'string') {
       const message = JSON.parse(data)
-      
+
       if (message.type === 'file-metadata') {
         this.currentFileMetadata = {
           name: message.name,
@@ -214,7 +214,7 @@ export class WebRTCConnection {
         const file = new File([blob], this.currentFileMetadata.name, {
           type: this.currentFileMetadata.mimeType
         })
-        
+
         this.onFileReceived?.(file)
         this.fileBuffer = []
         this.currentFileMetadata = null
@@ -232,7 +232,7 @@ export class WebRTCConnection {
   setOnConnectionStateChange(callback: (state: RTCPeerConnectionState) => void) {
     this.onConnectionStateChange = callback
   }
-  
+
   setOnError(callback: (error: Error) => void) {
     this.onError = callback
   }
