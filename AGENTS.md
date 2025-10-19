@@ -69,6 +69,23 @@
 - Running `npm install` without flags sometimes skips devDependencies
 - Solution: explicitly run `npm install --include=dev` or ensure NODE_ENV != 'production'
 
+## Error Handling
+
+### WebRTC Connection
+- Connection timeout: 10 seconds before giving up
+- Automatic reconnection: Up to 3 attempts with 2-second delays
+- Clear error messages for all failure modes:
+  - WebSocket connection failures
+  - Signaling errors
+  - Peer connection failures
+- Status indicators use emoji and color coding (✓✗⚠⟳)
+
+### User Feedback
+- Connection state changes displayed prominently
+- File transfer progress shown
+- Success/warning/error states color-coded
+- Graceful handling of edge cases (disconnect, timeout, etc.)
+
 ## CI/CD
 
 ### GitHub Actions Workflow

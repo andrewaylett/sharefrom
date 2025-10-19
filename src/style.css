@@ -106,6 +106,7 @@ button:disabled {
   border-radius: 0.5rem;
   background: #e3f2fd;
   color: #0d47a1;
+  font-weight: 500;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -115,9 +116,37 @@ button:disabled {
   }
 }
 
+.status.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+@media (prefers-color-scheme: dark) {
+  .status.success {
+    background: #1b5e20;
+    color: #c8e6c9;
+  }
+}
+
+.status.warning {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+@media (prefers-color-scheme: dark) {
+  .status.warning {
+    background: #e65100;
+    color: #ffe0b2;
+  }
+}
+
 .error {
+  margin: 1rem 0;
+  padding: 1rem;
+  border-radius: 0.5rem;
   background: #ffebee;
   color: #c62828;
+  font-weight: 500;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -125,4 +154,35 @@ button:disabled {
     background: #b71c1c;
     color: #ffcdd2;
   }
+}
+
+.files {
+  margin-top: 2rem;
+}
+
+.file-received {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: #e8f5e9;
+  border-radius: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@media (prefers-color-scheme: dark) {
+  .file-received {
+    background: #1b5e20;
+  }
+}
+
+.file-received button {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+}
+
+#progress {
+  margin: 1rem 0;
+  padding: 1rem;
+  font-weight: 500;
 }

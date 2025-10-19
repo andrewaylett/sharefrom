@@ -38,7 +38,33 @@ async function initLaptopView() {
   
   connection.setOnConnectionStateChange((state) => {
     const statusDiv = document.getElementById('status')!
-    statusDiv.textContent = `Connection: ${state}`
+    switch (state) {
+      case 'connected':
+        statusDiv.textContent = '✓ Connected. Waiting for phone...'
+        statusDiv.className = 'status success'
+        break
+      case 'connecting':
+        statusDiv.textContent = '⟳ Connecting...'
+        statusDiv.className = 'status'
+        break
+      case 'disconnected':
+        statusDiv.textContent = '⚠ Disconnected'
+        statusDiv.className = 'status warning'
+        break
+      case 'failed':
+        statusDiv.textContent = '✗ Connection failed'
+        statusDiv.className = 'error'
+        break
+      default:
+        statusDiv.textContent = `Connection: ${state}`
+        statusDiv.className = 'status'
+    }
+  })
+  
+  connection.setOnError((error) => {
+    const statusDiv = document.getElementById('status')!
+    statusDiv.textContent = `✗ Error: ${error.message}`
+    statusDiv.className = 'error'
   })
   
   connection.setOnFileReceived((file) => {
@@ -54,14 +80,24 @@ async function initLaptopView() {
     // Store file for download
     ;(window as any).receivedFiles = (window as any).receivedFiles || new Map()
     ;(window as any).receivedFiles.set(file.name, file)
+    
+    // Update status
+    const statusDiv = document.getElementById('status')!
+    statusDiv.textContent = `✓ Received ${file.name}`
+    statusDiv.className = 'status success'
   })
   
   try {
+    const statusDiv = document.getElementById('status')!
+    statusDiv.textContent = '⟳ Connecting to signaling server...'
     await connection.connect()
-    document.getElementById('status')!.textContent = 'Connected. Waiting for phone...'
+    statusDiv.textContent = '✓ Connected. Waiting for phone...'
+    statusDiv.className = 'status success'
   } catch (error) {
     console.error('Connection error:', error)
-    document.getElementById('status')!.textContent = 'Connection error. Please refresh.'
+    const statusDiv = document.getElementById('status')!
+    statusDiv.textContent = `✗ ${error instanceof Error ? error.message : 'Connection error. Please refresh.'}`
+    statusDiv.className = 'error'
   }
 }
 
@@ -132,20 +168,52 @@ async function initMobileView() {
   
   connection.setOnConnectionStateChange((state) => {
     const statusDiv = document.getElementById('status')!
-    if (state === 'connected') {
-      statusDiv.textContent = 'Connected! Select files to send.'
-    } else {
-      statusDiv.textContent = `Connection: ${state}`
+    switch (state) {
+      case 'connected':
+        statusDiv.textContent = '✓ Connected! Select files to send.'
+        statusDiv.className = 'status success'
+        sendButton.disabled = selectedFiles ? false : true
+        break
+      case 'connecting':
+        statusDiv.textContent = '⟳ Connecting...'
+        statusDiv.className = 'status'
+        break
+      case 'disconnected':
+        statusDiv.textContent = '⚠ Disconnected from laptop'
+        statusDiv.className = 'status warning'
+        sendButton.disabled = true
+        break
+      case 'failed':
+        statusDiv.textContent = '✗ Connection failed'
+        statusDiv.className = 'error'
+        sendButton.disabled = true
+        break
+      default:
+        statusDiv.textContent = `Connection: ${state}`
+        statusDiv.className = 'status'
     }
   })
   
+  connection.setOnError((error) => {
+    const statusDiv = document.getElementById('status')!
+    statusDiv.textContent = `✗ Error: ${error.message}`
+    statusDiv.className = 'error'
+    sendButton.disabled = true
+  })
+  
   try {
+    const statusDiv = document.getElementById('status')!
+    statusDiv.textContent = '⟳ Connecting to laptop...'
     await connection.connect()
     // Phone creates the offer
     await connection.createOffer()
+    statusDiv.textContent = '✓ Connected! Select files to send.'
+    statusDiv.className = 'status success'
   } catch (error) {
     console.error('Connection error:', error)
-    document.getElementById('status')!.textContent = 'Connection error. Please refresh.'
+    const statusDiv = document.getElementById('status')!
+    statusDiv.textContent = `✗ ${error instanceof Error ? error.message : 'Connection error. Please refresh.'}`
+    statusDiv.className = 'error'
   }
 }
 

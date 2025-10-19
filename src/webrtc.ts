@@ -4,13 +4,18 @@ const STUN_SERVERS = [
   { urls: 'stun:stun1.l.google.com:19302' }
 ]
 
+const MAX_RECONNECT_ATTEMPTS = 3
+const RECONNECT_DELAY_MS = 2000
+
 export class WebRTCConnection {
   private pc: RTCPeerConnection | null = null
   private ws: WebSocket | null = null
   private dataChannel: RTCDataChannel | null = null
   private sessionId: string
+  private reconnectAttempts = 0
   private onFileReceived?: (file: File) => void
   private onConnectionStateChange?: (state: RTCPeerConnectionState) => void
+  private onError?: (error: Error) => void
 
   constructor(sessionId: string) {
     this.sessionId = sessionId
@@ -25,20 +30,45 @@ export class WebRTCConnection {
     
     return new Promise((resolve, reject) => {
       if (!this.ws) return reject(new Error('WebSocket not initialized'))
+      
+      const connectTimeout = setTimeout(() => {
+        reject(new Error('Connection timeout - please check your internet connection'))
+      }, 10000)
 
       this.ws.onopen = () => {
+        clearTimeout(connectTimeout)
         console.log('WebSocket connected')
+        this.reconnectAttempts = 0
         this.setupPeerConnection()
         resolve()
       }
 
       this.ws.onerror = (error) => {
+        clearTimeout(connectTimeout)
         console.error('WebSocket error:', error)
-        reject(error)
+        const err = new Error('Failed to connect to signaling server')
+        this.onError?.(err)
+        reject(err)
+      }
+      
+      this.ws.onclose = (event) => {
+        clearTimeout(connectTimeout)
+        if (!event.wasClean && this.reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          console.log(`Connection lost, attempting to reconnect (${this.reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})...`)
+          this.reconnectAttempts++
+          setTimeout(() => {
+            this.connect().catch(err => this.onError?.(err))
+          }, RECONNECT_DELAY_MS)
+        }
       }
 
       this.ws.onmessage = async (event) => {
-        await this.handleSignalingMessage(JSON.parse(event.data))
+        try {
+          await this.handleSignalingMessage(JSON.parse(event.data))
+        } catch (error) {
+          console.error('Error handling signaling message:', error)
+          this.onError?.(error as Error)
+        }
       }
     })
   }
@@ -201,6 +231,10 @@ export class WebRTCConnection {
 
   setOnConnectionStateChange(callback: (state: RTCPeerConnectionState) => void) {
     this.onConnectionStateChange = callback
+  }
+  
+  setOnError(callback: (error: Error) => void) {
+    this.onError = callback
   }
 
   close() {
