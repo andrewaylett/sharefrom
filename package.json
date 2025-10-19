@@ -6,17 +6,22 @@
   "scripts": {
     "dev": "npm run build && wrangler dev --live-reload",
     "build": "tsc --noEmit && tsc --project worker/tsconfig.json && vite build",
+    "prebuild": "npm run lint",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc --project worker/tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "lint": "eslint .",
+    "format": "eslint --fix ."
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251011.0",
     "@vitest/ui": "^3.2.4",
+    "eslint": "^9.38.0",
+    "eslint-config-andrewaylett": "^6.1.0",
     "happy-dom": "^20.0.5",
     "jsdom": "^27.0.1",
     "typescript": "~5.9.3",

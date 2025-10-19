@@ -1,0 +1,8 @@
+{
+  "extends": [
+    "config:recommended",
+    "config:js-app",
+    "github>andrewaylett/renovate-config#v2",
+    ":assignAndReview(andrewaylett)"
+  ]
+}

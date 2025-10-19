@@ -1,182 +1,184 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vitest';
 
 describe('SignalingServer - Session Management', () => {
   it('should create a session with unique ID', () => {
-    const sessionId = 'test-session-id'
-    expect(sessionId).toMatch(/^[a-zA-Z0-9-]+$/)
-  })
+    const sessionId = 'test-session-id';
+    expect(sessionId).toMatch(/^[a-zA-Z0-9-]+$/);
+  });
 
   it('should store laptop and phone WebSocket connections separately', () => {
-    const sessions = new Map()
-    const sessionId = 'test-session'
-    
+    const sessions = new Map();
+    const sessionId = 'test-session';
+
     sessions.set(sessionId, {
       laptopWs: null,
       phoneWs: null,
       createdAt: Date.now(),
-      lastActivityAt: Date.now()
-    })
-    
-    expect(sessions.has(sessionId)).toBe(true)
-    expect(sessions.get(sessionId)).toHaveProperty('laptopWs')
-    expect(sessions.get(sessionId)).toHaveProperty('phoneWs')
-    expect(sessions.get(sessionId)).toHaveProperty('lastActivityAt')
-  })
+      lastActivityAt: Date.now(),
+    });
+
+    expect(sessions.has(sessionId)).toBe(true);
+    expect(sessions.get(sessionId)).toHaveProperty('laptopWs');
+    expect(sessions.get(sessionId)).toHaveProperty('phoneWs');
+    expect(sessions.get(sessionId)).toHaveProperty('lastActivityAt');
+  });
 
   it('should track last activity timestamp', () => {
-    const now = Date.now()
+    const now = Date.now();
     const session = {
       laptopWs: null,
       phoneWs: null,
       createdAt: now,
-      lastActivityAt: now
-    }
-    
-    expect(session.lastActivityAt).toBe(now)
-    
+      lastActivityAt: now,
+    };
+
+    expect(session.lastActivityAt).toBe(now);
+
     // Simulate activity update
-    const later = now + 5000
-    session.lastActivityAt = later
-    expect(session.lastActivityAt).toBe(later)
-  })
+    const later = now + 5000;
+    session.lastActivityAt = later;
+    expect(session.lastActivityAt).toBe(later);
+  });
 
   it('should expire sessions after timeout period', () => {
-    const SESSION_TIMEOUT_MS = 15 * 60 * 1000
-    const now = Date.now()
-    
+    const SESSION_TIMEOUT_MS = 15 * 60 * 1000;
+    const now = Date.now();
+
     const activeSession = {
       laptopWs: null,
       phoneWs: null,
       createdAt: now,
-      lastActivityAt: now
-    }
-    
+      lastActivityAt: now,
+    };
+
     const expiredSession = {
       laptopWs: null,
       phoneWs: null,
       createdAt: now - SESSION_TIMEOUT_MS - 1000,
-      lastActivityAt: now - SESSION_TIMEOUT_MS - 1000
-    }
-    
-    expect(now - activeSession.lastActivityAt).toBeLessThan(SESSION_TIMEOUT_MS)
-    expect(now - expiredSession.lastActivityAt).toBeGreaterThan(SESSION_TIMEOUT_MS)
-  })
+      lastActivityAt: now - SESSION_TIMEOUT_MS - 1000,
+    };
+
+    expect(now - activeSession.lastActivityAt).toBeLessThan(SESSION_TIMEOUT_MS);
+    expect(now - expiredSession.lastActivityAt).toBeGreaterThan(
+      SESSION_TIMEOUT_MS,
+    );
+  });
 
   it('should identify first connection as laptop', () => {
-    const sessions = new Map()
-    const sessionId = 'test-session'
-    
+    const sessions = new Map();
+    const sessionId = 'test-session';
+
     // First connection
     const session = {
       laptopWs: 'mock-ws-1',
       phoneWs: null,
-      createdAt: Date.now()
-    }
-    sessions.set(sessionId, session)
-    
-    expect(session.laptopWs).toBeTruthy()
-    expect(session.phoneWs).toBeNull()
-  })
+      createdAt: Date.now(),
+    };
+    sessions.set(sessionId, session);
+
+    expect(session.laptopWs).toBeTruthy();
+    expect(session.phoneWs).toBeNull();
+  });
 
   it('should identify second connection as phone', () => {
-    const sessions = new Map()
-    const sessionId = 'test-session'
-    
+    const sessions = new Map();
+    const sessionId = 'test-session';
+
     // First connection (laptop)
     const session: {
-      laptopWs: WebSocket | null
-      phoneWs: WebSocket | null
-      createdAt: number
+      laptopWs: WebSocket | null;
+      phoneWs: WebSocket | null;
+      createdAt: number;
     } = {
       laptopWs: 'mock-ws-1' as unknown as WebSocket,
       phoneWs: null,
-      createdAt: Date.now()
-    }
-    sessions.set(sessionId, session)
-    
+      createdAt: Date.now(),
+    };
+    sessions.set(sessionId, session);
+
     // Second connection (phone)
-    session.phoneWs = 'mock-ws-2' as unknown as WebSocket
-    
-    expect(session.laptopWs).toBeTruthy()
-    expect(session.phoneWs).toBeTruthy()
-  })
-})
+    session.phoneWs = 'mock-ws-2' as unknown as WebSocket;
+
+    expect(session.laptopWs).toBeTruthy();
+    expect(session.phoneWs).toBeTruthy();
+  });
+});
 
 describe('SignalingServer - Message Relay', () => {
   it('should relay SDP offer from phone to laptop', () => {
     const offer = {
       type: 'offer' as const,
-      sdp: 'v=0\r\no=- 123 0 IN IP4 127.0.0.1\r\n...'
-    }
-    
+      sdp: 'v=0\r\no=- 123 0 IN IP4 127.0.0.1\r\n...',
+    };
+
     const message = {
       type: 'offer',
-      payload: offer
-    }
-    
-    expect(message.type).toBe('offer')
-    expect(message.payload).toHaveProperty('sdp')
-  })
+      payload: offer,
+    };
+
+    expect(message.type).toBe('offer');
+    expect(message.payload).toHaveProperty('sdp');
+  });
 
   it('should relay SDP answer from laptop to phone', () => {
     const answer = {
       type: 'answer' as const,
-      sdp: 'v=0\r\no=- 456 0 IN IP4 127.0.0.1\r\n...'
-    }
-    
+      sdp: 'v=0\r\no=- 456 0 IN IP4 127.0.0.1\r\n...',
+    };
+
     const message = {
       type: 'answer',
-      payload: answer
-    }
-    
-    expect(message.type).toBe('answer')
-    expect(message.payload).toHaveProperty('sdp')
-  })
+      payload: answer,
+    };
+
+    expect(message.type).toBe('answer');
+    expect(message.payload).toHaveProperty('sdp');
+  });
 
   it('should relay ICE candidates between peers', () => {
     const candidate = {
       candidate: 'candidate:1 1 UDP 2130706431 192.168.1.1 54321 typ host',
       sdpMLineIndex: 0,
-      sdpMid: '0'
-    }
-    
+      sdpMid: '0',
+    };
+
     const message = {
       type: 'ice-candidate',
-      payload: candidate
-    }
-    
-    expect(message.type).toBe('ice-candidate')
-    expect(message.payload).toHaveProperty('candidate')
-  })
-})
+      payload: candidate,
+    };
+
+    expect(message.type).toBe('ice-candidate');
+    expect(message.payload).toHaveProperty('candidate');
+  });
+});
 
 describe('SignalingServer - Connection Lifecycle', () => {
   it('should validate WebSocket upgrade header', () => {
-    const upgradeHeader = 'websocket'
-    expect(upgradeHeader).toBe('websocket')
-  })
+    const upgradeHeader = 'websocket';
+    expect(upgradeHeader).toBe('websocket');
+  });
 
   it('should clean up session when both connections close', () => {
-    const sessions = new Map()
-    const sessionId = 'test-session'
-    
+    const sessions = new Map();
+    const sessionId = 'test-session';
+
     sessions.set(sessionId, {
       laptopWs: null,
       phoneWs: null,
-      createdAt: Date.now()
-    })
-    
+      createdAt: Date.now(),
+    });
+
     // Both connections closed
-    sessions.delete(sessionId)
-    
-    expect(sessions.has(sessionId)).toBe(false)
-  })
+    sessions.delete(sessionId);
+
+    expect(sessions.has(sessionId)).toBe(false);
+  });
 
   it('should notify other peer when one connection closes', () => {
     const message = {
-      type: 'peer-disconnected'
-    }
-    
-    expect(message.type).toBe('peer-disconnected')
-  })
-})
+      type: 'peer-disconnected',
+    };
+
+    expect(message.type).toBe('peer-disconnected');
+  });
+});

@@ -4,7 +4,7 @@
 
 ### Build System
 - Using Vite for frontend bundling and development
-- TypeScript with strict mode enabled
+- TypeScript with strict mode enabled, ESLint and Prettier
 - Separate tsconfig.json for worker code (needs @cloudflare/workers-types)
 - Build process: typecheck both frontend and worker, then bundle with Vite
 - Vitest for testing with happy-dom environment
