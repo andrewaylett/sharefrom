@@ -7,9 +7,7 @@ declare global {
   }
   // In module scope, globalThis will have these as well
   // This helps avoid any-casts in main.ts
-   
-  interface Global {
-    receivedFiles?: Map<string, File>;
-    downloadFile?: (name: string) => void;
-  }
+
+  var receivedFiles: Map<string, File> | undefined;
+  var downloadFile: ((name: string) => void) | undefined;
 }

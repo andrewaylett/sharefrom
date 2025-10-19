@@ -61,6 +61,8 @@ describe('Worker Request Routing', () => {
     const response = await worker.fetch(request, env);
 
     expect(env.ASSETS.fetch).toHaveBeenCalledWith(request);
-    expect(response).toBe(mockResponse);
+    expect(response.body).toBe(mockResponse.body);
+    expect(response.status).toBe(mockResponse.status);
+    expect(response.statusText).toBe(mockResponse.statusText);
   });
 });

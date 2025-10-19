@@ -22,9 +22,9 @@ ij_typescript_use_semicolon_after_statement = true
 [{*.har,*.jsb2,*.jsb3,*.json,.babelrc,.eslintrc,.prettierrc,.stylelintrc,bowerrc,jest.config}]
 indent_size = 2
 
+[{*.html,*.css}]
+indent_size = 2
+
 [{*.yml,*.yaml}]
 indent_size = 2
 tab_width = 2
-
-[host-meta]
-indent_size = unset
