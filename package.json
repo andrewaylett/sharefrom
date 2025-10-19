@@ -6,7 +6,7 @@
   "scripts": {
     "build": "npm run build:only",
     "build:only": "vite build",
-    "deploy": "npm run build && wrangler deploy --env production",
+    "deploy": "npm run build && wrangler deploy",
     "dev": "npm run format && npm run test && npm run build:only",
     "dev:run": "npm run build && wrangler dev --live-reload",
     "format": "npm run lint -- --fix",
