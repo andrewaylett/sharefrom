@@ -22,7 +22,7 @@
     "typecheck": "tsc --noEmit && tsc --project worker/tsconfig.json"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "4.20251011.0",
+    "@cloudflare/workers-types": "4.20251014.0",
     "@vitest/ui": "3.2.4",
     "eslint": "9.38.0",
     "eslint-config-andrewaylett": "6.1.0",
