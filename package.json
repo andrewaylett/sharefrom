@@ -23,14 +23,14 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "4.20251014.0",
-    "@vitest/ui": "3.2.4",
+    "@vitest/ui": "4.0.3",
     "eslint": "9.38.0",
     "eslint-config-andrewaylett": "6.1.0",
     "happy-dom": "20.0.8",
     "jsdom": "27.0.1",
     "typescript": "5.9.3",
     "vite": "7.1.12",
-    "vitest": "3.2.4",
+    "vitest": "4.0.3",
     "wrangler": "4.45.0"
   },
   "dependencies": {
