@@ -31,7 +31,7 @@
     "typescript": "5.9.3",
     "vite": "7.1.12",
     "vitest": "3.2.4",
-    "wrangler": "4.45.1"
+    "wrangler": "4.45.2"
   },
   "dependencies": {
     "@plausible-analytics/tracker": "0.4.3",
