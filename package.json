@@ -27,7 +27,7 @@
     "eslint": "9.38.0",
     "eslint-config-andrewaylett": "6.1.0",
     "happy-dom": "20.0.10",
-    "jsdom": "27.0.1",
+    "jsdom": "27.1.0",
     "typescript": "5.9.3",
     "vite": "7.1.12",
     "vitest": "3.2.4",
