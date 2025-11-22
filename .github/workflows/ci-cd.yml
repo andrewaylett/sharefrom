@@ -36,7 +36,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
     - name: Run pre-commit
-      uses: andrewaylett/pre-commit-action@89f5816efbcdd63c8e50cc588d57aaf595ac8c75 # v4
+      uses: andrewaylett/pre-commit-action@659d7531b80ebb5da915ce4fedffa4494e86e55a # v4
       env:
         SKIP: prettier,dedupe
 
